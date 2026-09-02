@@ -6,6 +6,8 @@ import os
 import sys
 from typing import List, Optional
 
+import boto3
+from botocore.config import Config
 from dotenv import load_dotenv
 
 
@@ -57,8 +59,39 @@ def invoke_bedrock(
     - 認証/権限/ネットワーク/タイムアウトなどは例外として投げてOK
      （main側で終了コード=1にしてstderrへ出ます）
     """
-    # TODO(TRAINEE): Implement Bedrock invocation and return the assistant text only.
-    raise NotImplementedError("Implement Bedrock invocation")
+    config = Config(
+        connect_timeout=timeout_sec,
+        read_timeout=timeout_sec,
+        retries={"max_attempts": 2, "mode": "standard"},
+    )
+
+    client = boto3.client(
+        "bedrock-runtime",
+        region_name=region,
+        config=config,
+    )
+
+    response = client.converse(
+        modelId=model_id,
+        messages=[
+            {
+                "role": "user",
+                "content": [{"text": prompt}],
+            }
+        ],
+        inferenceConfig={
+            "temperature": temperature,
+            "maxTokens": max_tokens,
+        },
+    )
+
+    content = response["output"]["message"]["content"]
+    texts = [block["text"] for block in content if "text" in block]
+
+    if not texts:
+        raise ValueError("Bedrock response does not contain text")
+
+    return "\n".join(texts)
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -118,8 +151,9 @@ def main(argv: List[str] | None = None) -> int:
         print(str(e), file=sys.stderr)
         return 1
     except Exception as e:
-        logging.error("%s", e)
-        print(str(e), file=sys.stderr)
+        error_message = f"{type(e).__name__}: {e}"
+        logging.error(error_message)
+        print(error_message, file=sys.stderr)
         return 1
 
 
