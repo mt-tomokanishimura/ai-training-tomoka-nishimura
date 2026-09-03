@@ -3,7 +3,11 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
+import boto3
+from dotenv import load_dotenv
+load_dotenv()
 from typing import Any, Dict, List
 
 
@@ -38,8 +42,58 @@ def generate_json(requirements: str) -> str:
     - 余計な前置き/後置きの文章を混ぜない
     - 壊れやすいので、プロンプトは短く・形式を固定する
     """
-    # TODO(TRAINEE): Generate a JSON string that passes validate_json().
-    raise NotImplementedError("Implement JSON generation")
+    region = os.getenv("AWS_REGION")
+    model_id = os.getenv("BEDROCK_MODEL_ID")
+
+    if not region:
+        raise ValueError("AWS_REGION is not configured")
+    if not model_id:
+        raise ValueError("BEDROCK_MODEL_ID is not configured")
+
+    prompt = f"""
+次の要件を実装タスクに整理してください。
+
+要件：
+{requirements}
+
+以下の形式に従い、有効なJSONだけを返してください。
+Markdownのコードブロックや説明文は付けないでください。
+
+{{
+  "title": "要件の要約タイトル",
+  "tasks": [
+    {{
+      "id": 1,
+      "description": "作業内容",
+      "acceptance_criteria": "完了条件"
+    }}
+  ],
+  "risks": ["想定リスク"]
+}}
+""".strip()
+
+    client = boto3.client("bedrock-runtime", region_name=region)
+    response = client.converse(
+        modelId=model_id,
+        messages=[
+            {
+                "role": "user",
+                "content": [{"text": prompt}],
+            }
+        ],
+        inferenceConfig={
+            "temperature": 0.2,
+            "maxTokens": 1024,
+        },
+    )
+
+    content = response["output"]["message"]["content"]
+    texts = [block["text"] for block in content if "text" in block]
+
+    if not texts:
+        raise ValueError("Bedrock response does not contain text")
+
+    return "\n".join(texts).strip()
 
 
 def validate_json(text: str) -> Dict[str, Any]:
