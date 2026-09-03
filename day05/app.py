@@ -4,6 +4,8 @@ import argparse
 import logging
 import sys
 from typing import List
+import re
+from pathlib import Path
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -35,8 +37,48 @@ def answer_with_rag(question: str) -> str:
     - 最初は単純なキーワード検索でもOK（高品質でなくてよい）
     - ヒットがない場合の挙動を必ず実装する
     """
-    # TODO(TRAINEE): Implement retrieval from day05/data and return Answer/Sources formatted text.
-    raise NotImplementedError("Implement RAG")
+    data_dir = Path(__file__).parent / "data"
+    files = sorted(data_dir.glob("*.txt"))
+
+    if not files:
+        raise FileNotFoundError("No text files found in day05/data")
+
+    def make_terms(value: str) -> set[str]:
+        compact = re.sub(r"[\s、。,.!?！？「」『』（）()]", "", value)
+        return {
+            compact[index : index + 2]
+            for index in range(len(compact) - 1)
+        }
+
+    question_terms = make_terms(question)
+    best_file: Path | None = None
+    best_text = ""
+    best_score = 0
+
+    for file_path in files:
+        text = file_path.read_text(encoding="utf-8")
+        score = len(question_terms & make_terms(text))
+
+        if score > best_score:
+            best_file = file_path
+            best_text = text
+            best_score = score
+
+    if best_file is None or best_score == 0:
+        return (
+            "Answer: 該当する根拠が見つかりませんでした。\n\n"
+            "Sources:\n"
+            "- (none)"
+        )
+
+    excerpt = " ".join(best_text.split())[:120]
+    source = best_file.relative_to(Path(__file__).parent.parent)
+
+    return (
+        f"Answer: 根拠として次の記述が見つかりました。{excerpt}\n\n"
+        f"Sources:\n"
+        f'- {source} (excerpt: "{excerpt}")'
+    )
 
 
 def main(argv: List[str] | None = None) -> int:
