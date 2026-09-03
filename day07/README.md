@@ -95,9 +95,9 @@ python -m day07.app --text "〇〇を実装する手順を教えて"
 
 調べたURLや、理解した要点をメモしてください。
 
-- LangGraphの基本（state/node/edge、条件分岐）
-- state設計（何を保持するか）
-- ログの入れ方（どのノードで何が起きたか）
+- LangGraphは、stateに途中結果を保存し、nodeで処理し、edgeで次の処理へつなぐ。
+- stateにはinput、intent、output、errors、modeを保持する。
+- 分類結果と実行した分岐をINFOログへ出し、処理経路を確認できるようにした。
 
 ## 付録：設計メモ
 
@@ -116,6 +116,10 @@ python -m day07.app --text "〇〇を実装する手順を教えて"
 
 - 方式A：LLMで分類して分岐（例：`rag` / `summarize` / `plan`）
 - 方式B：ルールで分類して分岐（キーワード、正規表現など）
+
+- 実装方式：ruleではキーワード、llmではBedrockを使って分類する。
+- 分類結果：rag / summarize / plan / default
+- 分類不能時：default分岐で通常処理する。
 
 ### 実装内容（例）
 
