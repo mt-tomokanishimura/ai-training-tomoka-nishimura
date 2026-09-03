@@ -143,9 +143,9 @@ streamlit run final/chat_ui.py
 
 利用した公開データについて、以下を記載してください。
 
-- データ名
-- URL
-- ライセンス
+- データ名：吾輩は猫である
+- URL：https://www.aozora.gr.jp/cards/000148/card789.html
+- ライセンス：著作権保護期間満了（青空文庫の利用規準に従う）
 
 ---
 
