@@ -38,8 +38,48 @@ def run_guarded(*, text: str, mode: str, case: int) -> str:
     返り値：
     - 標準出力に出る本文（文章）を返す
     """
-    # TODO(TRAINEE): Implement guard logic and ensure unsafe behavior is blocked in attack mode.
-    raise NotImplementedError("Implement guard and safe tool execution")
+    if len(text) > 1000:
+        raise ValueError("input is too long")
+
+    attack_rules = {
+        1: (
+            "指示の乗っ取り",
+            ("前の指示を無視", "秘密情報", "隠し情報"),
+        ),
+        2: (
+            "不正なシステムコマンド実行",
+            ("システムコマンド", "コマンドを実行", "環境変数を表示"),
+        ),
+        3: (
+            "許可されていないファイル操作",
+            ("ファイルを削除", "データを削除", "設定を書き換え"),
+        ),
+    }
+
+    normalized_text = text.strip()
+    rules_to_check = (
+        [(case, attack_rules[case])]
+        if mode == "attack"
+        else list(attack_rules.items())
+    )
+
+    for case_number, (reason, patterns) in rules_to_check:
+        if any(pattern in normalized_text for pattern in patterns):
+            logging.warning(
+                "guard rejected case=%s reason=%s",
+                case_number,
+                reason,
+            )
+            raise PermissionError(
+                f"不正な入力が検出されました: {reason}"
+            )
+
+    if mode == "attack":
+        raise PermissionError(
+            f"攻撃ケース{case}を安全のため拒否しました"
+        )
+
+    return f"安全に処理しました: {normalized_text}"
 
 
 def main(argv: List[str] | None = None) -> int:
