@@ -17,7 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _validate_args(args: argparse.Namespace) -> None:
     """引数の簡易バリデーションを行います（入力不備は exit code=2）。"""
-    if not args.text:
+    if not args.text.strip():
         raise ValueError("--text is required")
 
 
